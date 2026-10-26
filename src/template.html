@@ -42,7 +42,9 @@ header{display:flex;justify-content:space-between;align-items:center;gap:12px;fl
 .tile.done{border-color:color-mix(in srgb,var(--star) 55%,var(--line));background:color-mix(in srgb,var(--star) 10%,var(--card))}
 .tile.gold{border-color:var(--star);background:color-mix(in srgb,var(--star) 24%,var(--card))}
 .tile.next{border-color:var(--cons);box-shadow:0 0 0 3px color-mix(in srgb,var(--cons) 30%,transparent)}
-.tile:hover{transform:translateY(-2px)}
+.tile:not(:disabled):hover{transform:translateY(-2px)}
+.tile.locked{cursor:not-allowed;opacity:.5;background:var(--bg)}
+.tile small.lock{font-size:11px;letter-spacing:0;filter:grayscale(1)}
 .cup{position:absolute;top:-9px;right:-7px;font-size:17px;line-height:1;filter:drop-shadow(0 1px 1px rgba(0,0,0,.25))}
 .tile:not(.gold) .cup{filter:grayscale(.85) brightness(1.15) drop-shadow(0 1px 1px rgba(0,0,0,.25))}
 .legend{font-size:14px;color:var(--muted)}
@@ -122,7 +124,8 @@ const LEVELS=[];CHAPTERS.forEach((c,ci)=>c.L.forEach(L=>LEVELS.push({...L,ch:ci}
 
 // Рівнозначні слова: числа, які браузер пише цифрами, і чергування у/в, і/й.
 const NUM={"нуль":"0","один":"1","одна":"1","одне":"1","два":"2","дві":"2","три":"3","чотири":"4","пять":"5",
-  "шість":"6","сім":"7","вісім":"8","девять":"9","десять":"10","двадцять":"20","сто":"100","триста":"300"};
+  "шість":"6","сім":"7","вісім":"8","девять":"9","десять":"10","двадцять":"20","сто":"100","триста":"300",
+  "восьми":"8","пятьма":"5","друге":"2","чотирнадцять":"14","шістнадцять":"16","тисячу":"1000","тисячі":"1000"};
 const SAME={"у":["в"],"в":["у"],"і":["й"],"й":["і"]};
 // Символи, якими Safari інколи замінює слова, повертаємо назад у слова.
 const SYM={"%":" відсотків ","+":" плюс ","&":" і ","=":" дорівнює ","№":" номер ","°":" градусів ","$":" долар ","€":" євро "};
@@ -162,9 +165,12 @@ function renderTotals(){
   $("total").innerHTML=`<span>🏆 <b>${done}</b>/${LEVELS.length}</span><span>★ <b>${st}</b>/${LEVELS.length*3}</span>`;
   $("barfill").style.width=(done/LEVELS.length*100)+"%";
 }
+// Відкриті рівні: усі пройдені та перший непройдений.
+const nextOpen=()=>LEVELS.findIndex((_,i)=>!starsOf(i));
+const isOpen=i=>starsOf(i)>0||i===nextOpen();
 function renderMap(){
   const m=$("map");m.innerHTML="";
-  const next=LEVELS.findIndex((_,i)=>!starsOf(i));
+  const next=nextOpen();
   let idx=0;
   CHAPTERS.forEach((c,ci)=>{
     const box=document.createElement("div");box.className="chap";
@@ -175,12 +181,15 @@ function renderMap(){
     c.L.forEach((L,k)=>{const i=from+k,st=starsOf(i);
       const b=document.createElement("button");b.className="tile";b.title=L.t;
       b.setAttribute("aria-label",`Рівень ${i+1}: ${L.t}${st?", пройдено, зірок: "+st:""}`);
+      const open=isOpen(i);b.disabled=!open;b.classList.toggle("locked",!open);
+      if(!open)b.setAttribute("aria-label",`Рівень ${i+1}: ще закритий`);
       b.classList.toggle("done",st>0);b.classList.toggle("gold",st===3);b.classList.toggle("next",i===next);
-      b.innerHTML=`${st?'<span class="cup" aria-hidden="true">🏆</span>':""}<span>${i+1}</span><small aria-hidden="true">${"★".repeat(st)}${"☆".repeat(3-st)}</small>`;
-      b.onclick=()=>load(i);g.append(b)});
+      b.innerHTML=`${st?'<span class="cup" aria-hidden="true">🏆</span>':""}<span>${i+1}</span>`+
+        (open?`<small aria-hidden="true">${"★".repeat(st)}${"☆".repeat(3-st)}</small>`:`<small class="lock" aria-hidden="true">🔒</small>`);
+      b.onclick=()=>{if(isOpen(i))load(i)};g.append(b)});
     box.append(g);m.append(box);idx+=cnt});
   const lg=document.createElement("p");lg.className="legend";
-  lg.textContent="Золотий кубок — рівень прочитано без підказок. Наведіть на номер, щоб побачити назву.";
+  lg.textContent="Пройди рівень, щоб відкрити наступний. Золотий кубок — рівень прочитано без підказок.";
   m.append(lg);
   renderTotals();
 }
@@ -214,8 +223,9 @@ function finish(){
   const id=LEVELS[lvl].id;store.stars[id]=Math.max(store.stars[id]||0,st);save();renderTotals();
   const w=$("win");w.hidden=false;
   w.innerHTML=`<div class="stars">🏆 ${"★".repeat(st)}</div><p>${st===3?"Золотий кубок! Без жодної підказки!":"Рівень пройдено! Молодець!"}</p>`+
-   `<div class="row">${lvl+1<LEVELS.length?'<button class="big" id="next">Далі →</button>':""}<button class="alt" id="tomap">Усі рівні</button></div>`;
-  const n=$("next");if(n)n.onclick=()=>load(lvl+1);
+   `<div class="row">${nextOpen()>=0?'<button class="big" id="next">Далі →</button>':"<p>Усі рівні пройдено!</p>"}<button class="alt" id="tomap">Усі рівні</button></div>`;
+  // «Далі» — наступний рівень, якщо він відкритий, інакше перший непройдений
+  const n=$("next");if(n)n.onclick=()=>load(lvl+1<LEVELS.length&&isOpen(lvl+1)?lvl+1:nextOpen());
   $("tomap").onclick=showMap;
 }
 $("back").onclick=showMap;
