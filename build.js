@@ -5,13 +5,16 @@
 //   # Назва розділу
 //
 //   ## Назва рівня {id}
-//   Те-кст із ди-фі-са-ми між скла-да-ми.
-//   Мож-на в кіль-ка ряд-ків.
+//   Звичайний текст. Можна в кілька рядків.
+//
+// Склади розставляються автоматично (src/syllables.js).
+// Щоб задати поділ слова вручну, напишіть його з дефісами: за-плу-та-не.
 //
 // {id} — необов'язковий. За ним зберігаються зірки, тому не змінюйте його
 // в уже пройдених рівнях. Без {id} використовується назва рівня.
 
 const fs = require("fs");
+const { syllabifyText } = require("./src/syllables");
 const path = require("path");
 
 const ROOT = __dirname;
@@ -65,6 +68,7 @@ const chapters = files.map(f => parseChapter(path.join(ROOT, "levels", f)));
 
 const ids = new Map();
 chapters.forEach(c => c.L.forEach(l => {
+  l.s = syllabifyText(l.s);
   check(l);
   if (ids.has(l.id)) problems.push(`${l.where}: id «${l.id}» вже є в ${ids.get(l.id)}`);
   ids.set(l.id, l.where);
