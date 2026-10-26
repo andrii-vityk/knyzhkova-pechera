@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Книжкова печера</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Unbounded:wght@500;700&display=swap">
+<style>
+/* Layout: two views. Map = chapters of 10 numbered tiles (TypingClub-style); Play = reading card + controls. */
+:root{
+  --bg:#e8f3f6; --card:#ffffff; --ink:#1d2a44; --muted:#5d6b85;
+  --vowel:#d6362f; --cons:#2457c5; --done:#1f9d55; --star:#f2b01e; --line:#c9dbe3;
+  --display:"Unbounded",system-ui,sans-serif; --read:"Andika","Comic Sans MS",system-ui,sans-serif;
+  --size:44px;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#121a2a; --card:#1b2640; --ink:#eef3fb; --muted:#9fb0cc;
+  --vowel:#ff7a6e; --cons:#7ea6ff; --done:#4cd38a; --star:#ffc94a; --line:#2c3a5a; color-scheme:dark}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,sans-serif;
+  padding:16px max(16px,env(safe-area-inset-right)) 40px max(16px,env(safe-area-inset-left))}
+main{max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1{font:700 22px var(--display);margin:0;letter-spacing:.01em}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.total{font:700 16px var(--display);color:var(--muted);display:flex;gap:14px}
+.total b{color:var(--star)}
+.bar{height:10px;border-radius:6px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--star);border-radius:6px}
+
+/* Карта рівнів */
+#map{display:flex;flex-direction:column;gap:22px}
+.chap h3{font:500 15px var(--display);margin:0 0 10px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.chap h3 span{color:var(--muted);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(10,1fr);gap:8px}
+@media (max-width:600px){.grid{grid-template-columns:repeat(5,1fr)}}
+.tile{position:relative;aspect-ratio:1;max-width:100%;border:2px solid var(--line);border-radius:12px;background:var(--card);
+  color:var(--ink);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0;
+  font:700 clamp(16px,2.6vw,22px) var(--read)}
+.tile small{font-size:10px;letter-spacing:1px;color:var(--star);line-height:1}
+.tile.done{border-color:color-mix(in srgb,var(--star) 55%,var(--line));background:color-mix(in srgb,var(--star) 10%,var(--card))}
+.tile.gold{border-color:var(--star);background:color-mix(in srgb,var(--star) 24%,var(--card))}
+.tile.next{border-color:var(--cons);box-shadow:0 0 0 3px color-mix(in srgb,var(--cons) 30%,transparent)}
+.tile:hover{transform:translateY(-2px)}
+.cup{position:absolute;top:-9px;right:-7px;font-size:17px;line-height:1;filter:drop-shadow(0 1px 1px rgba(0,0,0,.25))}
+.tile:not(.gold) .cup{filter:grayscale(.85) brightness(1.15) drop-shadow(0 1px 1px rgba(0,0,0,.25))}
+.legend{font-size:14px;color:var(--muted)}
+
+/* Читання */
+.playbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.playbar span{color:var(--muted);font:500 14px var(--display)}
+.card{background:var(--card);border-radius:22px;padding:24px;border:2px solid var(--line)}
+.card h2{font:500 18px var(--display);margin:0 0 16px;color:var(--muted)}
+#text{font:400 var(--size)/1.7 var(--read);display:flex;flex-wrap:wrap;gap:.15em .45em}
+.w{cursor:pointer;border-radius:10px;padding:0 .12em;border-bottom:4px solid transparent;transition:background .2s}
+.w.cur{border-bottom-color:var(--cons);background:color-mix(in srgb,var(--cons) 10%,transparent)}
+.w.ok{color:var(--done)!important}
+.w.ok .v,.w.ok .c{color:var(--done)}
+.sep{color:var(--muted);opacity:.6}
+.v{color:var(--vowel)} .c{color:var(--cons)}
+.plain .v,.plain .c{color:inherit}
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+button.big{font:700 18px var(--read);border:0;border-radius:16px;padding:14px 20px;cursor:pointer;background:var(--cons);color:#fff}
+button.big.stop{background:var(--vowel)}
+button.alt{font:600 16px var(--read);border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;padding:12px 16px;cursor:pointer}
+button:focus-visible,.w:focus-visible{outline:3px solid var(--star);outline-offset:2px}
+#heard{color:var(--muted);min-height:1.4em;font-size:15px}
+#status{font-size:15px;color:var(--muted)}
+.settings{display:flex;gap:16px;flex-wrap:wrap;font-size:15px;color:var(--muted)}
+.settings label{display:flex;gap:6px;align-items:center}
+.win{text-align:center;padding:12px 0 0}
+.win .stars{font-size:52px;color:var(--star);letter-spacing:6px}
+.win p{font:700 20px var(--display);margin:4px 0 12px}
+.win .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+@media (prefers-reduced-motion:no-preference){.win .stars{animation:pop .6s ease-out}.tile{transition:transform .15s}}
+@keyframes pop{0%{transform:scale(.3)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+@media (max-width:500px){:root{--size:32px}.card{padding:16px}}
+</style>
+</head>
+<body>
+<main>
+  <header><h1>Книжкова печера</h1><div class="total" id="total"></div></header>
+  <div class="bar" aria-hidden="true"><i id="barfill"></i></div>
+
+  <section id="map" aria-label="Рівні"></section>
+
+  <section id="play" hidden>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="playbar"><button class="alt" id="back">← Усі рівні</button><span id="lvlno"></span></div>
+      <div class="card">
+        <h2 id="ttl"></h2>
+        <div id="text"></div>
+        <div id="win" class="win" hidden></div>
+      </div>
+      <div class="controls">
+        <button class="big" id="mic">🎤 Читати</button>
+        <button class="alt" id="confirm" title="Дорослий підтверджує слово">✓ Прочитав слово</button>
+        <button class="alt" id="restart">↺ Спочатку</button>
+      </div>
+      <div id="heard"></div>
+      <div id="status"></div>
+      <div class="settings">
+        <label><input type="checkbox" id="optSyl" checked> Склади</label>
+        <label><input type="checkbox" id="optCol" checked> Голосні червоні, приголосні сині</label>
+        <label>Розмір <input type="range" id="optSize" min="26" max="64" value="44"></label>
+      </div>
+    </div>
+  </section>
+</main>
+<script>
+// Тексти: дефіс ділить слово на склади. id не змінювати — за ним зберігаються зірки.
+const CHAPTERS=/*LEVELS*/;
+const LEVELS=[];CHAPTERS.forEach((c,ci)=>c.L.forEach(L=>LEVELS.push({...L,ch:ci})));
+
+// Рівнозначні слова: числа, які браузер пише цифрами, і чергування у/в, і/й.
+const NUM={"нуль":"0","один":"1","одна":"1","одне":"1","два":"2","дві":"2","три":"3","чотири":"4","пять":"5",
+  "шість":"6","сім":"7","вісім":"8","девять":"9","десять":"10","двадцять":"20","сто":"100","триста":"300"};
+const SAME={"у":["в"],"в":["у"],"і":["й"],"й":["і"]};
+// Символи, якими Safari інколи замінює слова, повертаємо назад у слова.
+const SYM={"%":" відсотків ","+":" плюс ","&":" і ","=":" дорівнює ","№":" номер ","°":" градусів ","$":" долар ","€":" євро "};
+const unsym=t=>t.replace(/[%+&=№°$€]/g,m=>SYM[m]).replace(/(\d)([а-яіїєґ])/gi,"$1 $2");
+// Будь-який інший значок чи емодзі (✝, ❌, ⭐, 🍎…) замість слова вважаємо прочитаним словом.
+// Вимкнути: SYMBOL_AS_WORD=false.
+const SYMBOL_AS_WORD=true, ANY="\u0000";
+function tokens(txt){return unsym(txt).split(/\s+/).map(t=>{const n=norm(t);if(n)return n;
+  const rest=t.replace(/[.,!?:;"«»()\-–—…’'ʼ`\s]/g,"");return rest&&SYMBOL_AS_WORD?ANY:""}).filter(Boolean)}
+
+const VOW="аеєиіїоуюяАЕЄИІЇОУЮЯ";
+const $=id=>document.getElementById(id);
+
+let store={};try{store=JSON.parse(localStorage.getItem("chytaiko")||"{}")}catch(e){}
+store.stars=store.stars||{};
+// перенесення зірок зі старої версії (там ключем був номер рівня)
+if(!store.v){const old=store.stars;store.stars={};
+  Object.keys(old).forEach(k=>{if(/^\d+$/.test(k))store.stars["k"+(+k+1)]=old[k];else store.stars[k]=old[k]});
+  store.v=2;store.last=undefined}
+const save=()=>{try{localStorage.setItem("chytaiko",JSON.stringify(store))}catch(e){}};
+save();
+
+const norm=s=>s.toLowerCase().replace(/[’'ʼ`]/g,"").replace(/[^a-zа-щьюяґєії0-9]/gi,"");
+function lev(a,b){const d=[...Array(b.length+1).keys()];for(let i=1;i<=a.length;i++){let p=d[0];d[0]=i;for(let j=1;j<=b.length;j++){const t=d[j];d[j]=Math.min(d[j]+1,d[j-1]+1,p+(a[i-1]===b[j-1]?0:1));p=t}}return d[b.length]}
+function match(heard,want){if(heard===want)return true;if(heard===ANY)return want.length>=3;if(NUM[want]&&NUM[want]===heard)return true;
+  if((SAME[want]||[]).includes(heard))return true;return want.length>=5&&lev(heard,want)<=1}
+
+let lvl=0,words=[],cur=0,hints=0;
+const starsOf=i=>store.stars[LEVELS[i].id]||0;
+
+function renderTotals(){
+  const done=LEVELS.filter((_,i)=>starsOf(i)>0).length;
+  const st=LEVELS.reduce((a,_,i)=>a+starsOf(i),0);
+  $("total").innerHTML=`<span>🏆 <b>${done}</b>/${LEVELS.length}</span><span>★ <b>${st}</b>/${LEVELS.length*3}</span>`;
+  $("barfill").style.width=(done/LEVELS.length*100)+"%";
+}
+function renderMap(){
+  const m=$("map");m.innerHTML="";
+  const next=LEVELS.findIndex((_,i)=>!starsOf(i));
+  let idx=0;
+  CHAPTERS.forEach((c,ci)=>{
+    const box=document.createElement("div");box.className="chap";
+    const from=idx,cnt=c.L.length;
+    const done=c.L.filter((_,k)=>starsOf(from+k)>0).length;
+    box.innerHTML=`<h3>Розділ ${ci+1} · ${c.n}<span>🏆 ${done}/${cnt}</span></h3>`;
+    const g=document.createElement("div");g.className="grid";
+    c.L.forEach((L,k)=>{const i=from+k,st=starsOf(i);
+      const b=document.createElement("button");b.className="tile";b.title=L.t;
+      b.setAttribute("aria-label",`Рівень ${i+1}: ${L.t}${st?", пройдено, зірок: "+st:""}`);
+      b.classList.toggle("done",st>0);b.classList.toggle("gold",st===3);b.classList.toggle("next",i===next);
+      b.innerHTML=`${st?'<span class="cup" aria-hidden="true">🏆</span>':""}<span>${i+1}</span><small aria-hidden="true">${"★".repeat(st)}${"☆".repeat(3-st)}</small>`;
+      b.onclick=()=>load(i);g.append(b)});
+    box.append(g);m.append(box);idx+=cnt});
+  const lg=document.createElement("p");lg.className="legend";
+  lg.textContent="Золотий кубок — рівень прочитано без підказок. Наведіть на номер, щоб побачити назву.";
+  m.append(lg);
+  renderTotals();
+}
+function showMap(){stopMic();$("play").hidden=true;$("map").hidden=false;renderMap();window.scrollTo(0,0)}
+
+function load(i){
+  stopMic();lvl=i;cur=0;hints=0;store.last=LEVELS[i].id;save();
+  $("map").hidden=true;$("play").hidden=false;window.scrollTo(0,0);
+  const L=LEVELS[i];
+  $("ttl").textContent=L.t;$("lvlno").textContent=`Рівень ${i+1} з ${LEVELS.length} · ${CHAPTERS[L.ch].n}`;
+  $("win").hidden=true;$("heard").textContent="";$("status").textContent="";
+  const box=$("text");box.innerHTML="";words=[];
+  L.s.split(/\s+/).forEach(tok=>{
+    const el=document.createElement("span");el.className="w";el.tabIndex=0;
+    const parts=tok.split("-");
+    parts.forEach((p,k)=>{if(k)el.insertAdjacentHTML("beforeend",'<span class="sep syl">-</span>');
+      [...p].forEach(ch=>{const s=document.createElement("span");
+        if(/[а-щьюяґєії]/i.test(ch))s.className=VOW.includes(ch)?"v":"c";s.textContent=ch;el.append(s)})});
+    el.onclick=()=>{hints++;speak(parts.join("").replace(/[.,!?:]/g,""))};
+    el.onkeydown=e=>{if(e.key==="Enter")el.onclick()};
+    words.push({el,want:norm(parts.join(""))});box.append(el)});
+  applyOpts();mark();renderTotals();
+}
+function mark(){words.forEach((w,i)=>{w.el.classList.toggle("ok",i<cur);w.el.classList.toggle("cur",i===cur)})}
+function advance(){cur++;mark();if(cur>=words.length)finish()}
+function finish(){
+  stopMic();const st=hints===0?3:hints<=2?2:1;
+  const id=LEVELS[lvl].id;store.stars[id]=Math.max(store.stars[id]||0,st);save();renderTotals();
+  const w=$("win");w.hidden=false;
+  w.innerHTML=`<div class="stars">🏆 ${"★".repeat(st)}</div><p>${st===3?"Золотий кубок! Без жодної підказки!":"Рівень пройдено! Молодець!"}</p>`+
+   `<div class="row">${lvl+1<LEVELS.length?'<button class="big" id="next">Далі →</button>':""}<button class="alt" id="tomap">Усі рівні</button></div>`;
+  const n=$("next");if(n)n.onclick=()=>load(lvl+1);
+  $("tomap").onclick=showMap;
+}
+$("back").onclick=showMap;
+
+// Озвучка слова
+let ukVoice=null;
+function pickVoice(){ukVoice=speechSynthesis.getVoices().find(v=>v.lang&&v.lang.toLowerCase().startsWith("uk"))||null}
+if("speechSynthesis"in window){pickVoice();speechSynthesis.onvoiceschanged=pickVoice}
+function speak(t){if(!("speechSynthesis"in window))return;const u=new SpeechSynthesisUtterance(t);u.lang="uk-UA";if(ukVoice)u.voice=ukVoice;u.rate=.8;speechSynthesis.cancel();speechSynthesis.speak(u)}
+
+// Розпізнавання мовлення
+// Chrome інколи «засинає» без жодної події. Тому: кожен перезапуск — новий
+// екземпляр розпізнавача, а сторож перезапускає його, якщо 6 с немає жодних подій.
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let rec=null,listening=false,lastAct=0,restartT=null,watchT=null;
+function setMicUi(on){$("mic").textContent=on?"⏹ Стоп":"🎤 Читати";$("mic").classList.toggle("stop",on)}
+function stopMic(){listening=false;clearTimeout(restartT);clearInterval(watchT);
+  const r=rec;rec=null;if(r)try{r.abort()}catch(e){};setMicUi(false)}
+function restartSoon(ms){clearTimeout(restartT);restartT=setTimeout(()=>{if(!listening)return;
+  const old=rec;rec=null;if(old)try{old.abort()}catch(e){}
+  begin()},ms)}
+function begin(){
+  const r=new SR();rec=r;r.lang="uk-UA";r.continuous=true;r.interimResults=true;
+  // Слова зараховуються вже з проміжних результатів, не чекаючи паузи.
+  // used[i] = скільки слів із результату i вже зараховано, щоб не рахувати двічі.
+  const used={};
+  const live=()=>listening&&rec===r;
+  const touch=()=>{if(live())lastAct=Date.now()};
+  r.onstart=r.onaudiostart=r.onspeechstart=touch;
+  r.onresult=e=>{if(!live())return;touch();let interim="";
+    for(let i=e.resultIndex;i<e.results.length;i++){const res=e.results[i];const txt=res[0].transcript;
+      const toks=tokens(txt);
+      let k=used[i]||0;
+      // у проміжному результаті останнє слово може бути недоговореним — його пропускаємо
+      const lim=res.isFinal?toks.length:toks.length-1;
+      for(let j=k;j<lim&&cur<words.length;j++){const h=toks[j];
+        if(match(h,words[cur].want)){advance();k=j+1}
+        else if(cur+1<words.length&&words[cur].want.length<=2&&match(h,words[cur+1].want)){cur++;advance();k=j+1}}
+      // останнє проміжне слово: зараховуємо, лише якщо воно точно збігається
+      if(!res.isFinal&&toks.length>k&&cur<words.length&&toks[toks.length-1]===words[cur].want){advance();k=toks.length}
+      used[i]=k;
+      if(res.isFinal)$("heard").textContent="Почуто: "+txt;else interim+=txt}
+    if(interim)$("heard").textContent="Слухаю: "+interim};
+  r.onerror=e=>{if(!live())return;
+    if(e.error==="not-allowed"||e.error==="service-not-allowed"){stopMic();
+      $("status").textContent="Немає доступу до мікрофона. Дозвольте мікрофон для цієї сторінки й натисніть «Читати» ще раз."}
+    else if(e.error==="network")$("status").textContent="Немає зв'язку з сервісом розпізнавання. Пробую знову…"};
+  r.onend=()=>{if(live())restartSoon(250)};
+  lastAct=Date.now();
+  try{r.start()}catch(e){restartSoon(600)}
+}
+function startMic(){
+  if(!SR){$("status").textContent="Цей браузер не розпізнає мовлення. Спробуйте Safari або Chrome, або дорослий натискає «✓ Прочитав слово».";return}
+  listening=true;$("status").textContent="";setMicUi(true);begin();
+  clearInterval(watchT);watchT=setInterval(()=>{if(listening&&Date.now()-lastAct>6000){lastAct=Date.now();restartSoon(0)}},1000);
+}
+$("mic").onclick=()=>listening?stopMic():startMic();
+// після ручного підтвердження — чистий перезапуск, щоб старий недочитаний фрагмент не заважав
+$("confirm").onclick=()=>{if(cur<words.length){advance();if(listening)restartSoon(0)}};
+$("restart").onclick=()=>{stopMic();load(lvl)};
+
+
+$("restart").onclick=()=>load(lvl);
+
+// Налаштування
+store.opt=store.opt||{syl:true,col:true,size:44};
+function applyOpts(){
+  $("optSyl").checked=store.opt.syl;$("optCol").checked=store.opt.col;$("optSize").value=store.opt.size;
+  document.querySelectorAll(".syl").forEach(s=>s.hidden=!store.opt.syl);
+  $("text").classList.toggle("plain",!store.opt.col);
+  document.documentElement.style.setProperty("--size",store.opt.size+"px");
+}
+$("optSyl").onchange=e=>{store.opt.syl=e.target.checked;save();applyOpts()};
+$("optCol").onchange=e=>{store.opt.col=e.target.checked;save();applyOpts()};
+$("optSize").oninput=e=>{store.opt.size=+e.target.value;save();applyOpts()};
+
+showMap();
+</script>
+</body>
+</html>
