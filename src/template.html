@@ -48,6 +48,8 @@ header{display:flex;justify-content:space-between;align-items:center;gap:12px;fl
 .cup{position:absolute;top:-9px;right:-7px;font-size:17px;line-height:1;filter:drop-shadow(0 1px 1px rgba(0,0,0,.25))}
 .tile:not(.gold) .cup{filter:grayscale(.85) brightness(1.15) drop-shadow(0 1px 1px rgba(0,0,0,.25))}
 .legend{font-size:14px;color:var(--muted)}
+.foot{font-size:13px;line-height:1.5;color:var(--muted);border-top:1px solid var(--line);padding-top:12px;margin-top:8px}
+.foot p{margin:0;max-width:70ch}
 .note{background:color-mix(in srgb,var(--star) 16%,var(--card));border:1px solid color-mix(in srgb,var(--star) 55%,var(--line));
   border-radius:12px;padding:10px 14px;font-size:15px;line-height:1.45;display:flex;gap:10px;align-items:flex-start}
 .note p{margin:0;flex:1;min-width:0}
@@ -122,6 +124,14 @@ button:focus-visible,.w:focus-visible{outline:3px solid var(--star);outline-offs
       </div>
     </div>
   </section>
+
+  <footer class="foot">
+    <p><b>Про дані.</b> Сама сторінка нічого не зберігає на сервері й нікуди не надсилає: прогрес і налаштування лежать лише у вашому браузері.
+    Але розпізнавання мовлення виконує браузер, і зазвичай він передає звук для обробки своєму виробнику:
+    Chrome і Samsung Internet — Google, Edge — Microsoft, Safari — Apple. Умови обробки визначає ця компанія, а не сайт.
+    Розпізнавання вмикається лише після натискання «Читати» й дозволу на мікрофон.
+    Шрифти завантажуються з Google Fonts, а сайт розміщено на GitHub Pages, тож ці сервіси бачать технічні дані відвідування, як-от IP-адресу.</p>
+  </footer>
 </main>
 <script>
 // Тексти: дефіс ділить слово на склади. id не змінювати — за ним зберігаються зірки.
