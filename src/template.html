@@ -140,6 +140,9 @@ save();
 
 const norm=s=>s.toLowerCase().replace(/[’'ʼ`]/g,"").replace(/[^a-zа-щьюяґєії0-9]/gi,"");
 function lev(a,b){const d=[...Array(b.length+1).keys()];for(let i=1;i<=a.length;i++){let p=d[0];d[0]=i;for(let j=1;j<=b.length;j++){const t=d[j];d[j]=Math.min(d[j]+1,d[j-1]+1,p+(a[i-1]===b[j-1]?0:1));p=t}}return d[b.length]}
+// Власні назви розпізнавання часто чує як звичайні слова (Бім → бін, дім),
+// тож для них допускаємо одну неточну літеру.
+function matchW(h,w){return match(h,w.want)||(w.name&&w.want.length>=3&&lev(h,w.want)<=1)}
 function match(heard,want){if(heard===want)return true;if(heard===ANY)return want.length>=3;if(NUM[want]&&NUM[want]===heard)return true;
   if((SAME[want]||[]).includes(heard))return true;return want.length>=5&&lev(heard,want)<=1}
 
@@ -183,7 +186,10 @@ function load(i){
   $("ttl").textContent=L.t;$("lvlno").textContent=`Рівень ${i+1} з ${LEVELS.length} · ${CHAPTERS[L.ch].n}`;
   $("win").hidden=true;$("heard").textContent="";$("status").textContent="";
   const box=$("text");box.innerHTML="";words=[];
+  let sentStart=true;
   L.s.split(/\s+/).forEach(tok=>{
+    // власна назва: велика літера не на початку речення (Бім, Стів, Микола)
+    const isName=!sentStart&&/^[А-ЩЬЮЯҐЄІЇ]/.test(tok);sentStart=/[.!?]$/.test(tok);
     const el=document.createElement("span");el.className="w";el.tabIndex=0;
     const parts=tok.split("-");
     parts.forEach((p,k)=>{if(k)el.insertAdjacentHTML("beforeend",'<span class="sep syl">-</span>');
@@ -191,7 +197,7 @@ function load(i){
         if(/[а-щьюяґєії]/i.test(ch))s.className=VOW.includes(ch)?"v":"c";s.textContent=ch;el.append(s)})});
     el.onclick=()=>{hints++;speak(parts.join("").replace(/[.,!?:]/g,""))};
     el.onkeydown=e=>{if(e.key==="Enter")el.onclick()};
-    words.push({el,want:norm(parts.join(""))});box.append(el)});
+    words.push({el,want:norm(parts.join("")),name:isName});box.append(el)});
   applyOpts();mark();renderTotals();
 }
 function mark(){words.forEach((w,i)=>{w.el.classList.toggle("ok",i<cur);w.el.classList.toggle("cur",i===cur)})}
@@ -239,7 +245,9 @@ function begin(){
       // у проміжному результаті останнє слово може бути недоговореним — його пропускаємо
       const lim=res.isFinal?toks.length:toks.length-1;
       for(let j=k;j<lim&&cur<words.length;j++){const h=toks[j];
-        if(match(h,words[cur].want)){advance();k=j+1}
+        if(matchW(h,words[cur])){advance();k=j+1}
+        // два слова злиплися в одне («песбім»)
+        else if(cur+1<words.length&&h===words[cur].want+words[cur+1].want){advance();advance();k=j+1}
         else if(cur+1<words.length&&words[cur].want.length<=2&&match(h,words[cur+1].want)){cur++;advance();k=j+1}}
       // останнє проміжне слово: зараховуємо, лише якщо воно точно збігається
       if(!res.isFinal&&toks.length>k&&cur<words.length&&toks[toks.length-1]===words[cur].want){advance();k=toks.length}
