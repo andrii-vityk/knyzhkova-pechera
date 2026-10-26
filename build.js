@@ -86,5 +86,9 @@ const html = tpl.replace("/*LEVELS*/", JSON.stringify(data, null, 1).replace(/</
 
 fs.mkdirSync(path.join(ROOT, "dist"), { recursive: true });
 fs.writeFileSync(path.join(ROOT, "dist", "index.html"), html);
+// іконки сайту: src/icons/* → dist/
+for (const f of fs.readdirSync(path.join(ROOT, "src", "icons"))) {
+  fs.copyFileSync(path.join(ROOT, "src", "icons", f), path.join(ROOT, "dist", f));
+}
 const n = data.reduce((a, c) => a + c.L.length, 0);
 console.log(`Готово: ${data.length} розділів, ${n} рівнів → dist/index.html`);
