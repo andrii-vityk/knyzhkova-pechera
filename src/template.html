@@ -46,6 +46,9 @@ header{display:flex;justify-content:space-between;align-items:center;gap:12px;fl
 .cup{position:absolute;top:-9px;right:-7px;font-size:17px;line-height:1;filter:drop-shadow(0 1px 1px rgba(0,0,0,.25))}
 .tile:not(.gold) .cup{filter:grayscale(.85) brightness(1.15) drop-shadow(0 1px 1px rgba(0,0,0,.25))}
 .legend{font-size:14px;color:var(--muted)}
+.foot{font-size:14px;color:var(--muted);padding-top:8px;border-top:1px solid var(--line)}
+.foot a{color:var(--muted)}
+.foot a:hover{color:var(--cons)}
 
 /* Читання */
 .playbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
@@ -107,6 +110,8 @@ button:focus-visible,.w:focus-visible{outline:3px solid var(--star);outline-offs
       </div>
     </div>
   </section>
+
+  <footer class="foot"><a href="https://github.com/andrii-vityk/knyzhkova-pechera" target="_blank" rel="noopener">Код і тексти на GitHub</a></footer>
 </main>
 <script>
 // Тексти: дефіс ділить слово на склади. id не змінювати — за ним зберігаються зірки.
