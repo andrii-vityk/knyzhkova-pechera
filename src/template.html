@@ -146,7 +146,10 @@ function matchW(h,w){return match(h,w.want)||(w.name&&w.want.length>=3&&lev(h,w.
 function match(heard,want){if(heard===want)return true;if(heard===ANY)return want.length>=3;if(NUM[want]&&NUM[want]===heard)return true;
   if((SAME[want]||[]).includes(heard))return true;return want.length>=5&&lev(heard,want)<=1}
 
-let lvl=0,words=[],cur=0,hints=0;
+let lvl=0,words=[],cur=0,hints=0,lowerCache=null;
+// усі слова, які хоч раз написані з малої літери
+function LOWER_WORDS(){if(lowerCache)return lowerCache;lowerCache=new Set();
+  LEVELS.forEach(L=>L.s.split(/\s+/).forEach(t=>{if(/^[а-щьюяґєії]/.test(t))lowerCache.add(norm(t.replace(/-/g,"")))}));return lowerCache}
 const starsOf=i=>store.stars[LEVELS[i].id]||0;
 
 function renderTotals(){
@@ -188,8 +191,10 @@ function load(i){
   const box=$("text");box.innerHTML="";words=[];
   let sentStart=true;
   L.s.split(/\s+/).forEach(tok=>{
-    // власна назва: велика літера не на початку речення (Бім, Стів, Микола)
-    const isName=!sentStart&&/^[А-ЩЬЮЯҐЄІЇ]/.test(tok);sentStart=/[.!?]$/.test(tok);
+    // власна назва: велика літера не на початку речення, або слово, яке
+    // в жодному тексті не трапляється з малої літери (Стів)
+    const cap=/^[А-ЩЬЮЯҐЄІЇ]/.test(tok);
+    const isName=cap&&(!sentStart||!LOWER_WORDS().has(norm(tok.replace(/-/g,""))));sentStart=/[.!?]$/.test(tok);
     const el=document.createElement("span");el.className="w";el.tabIndex=0;
     const parts=tok.split("-");
     parts.forEach((p,k)=>{if(k)el.insertAdjacentHTML("beforeend",'<span class="sep syl">-</span>');

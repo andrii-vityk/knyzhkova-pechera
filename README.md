@@ -32,4 +32,5 @@
 - `src/template.html` — сторінка без текстів
 - `src/syllables.js` — автоматичний поділ на склади
 - `build.js` — збирає `dist/index.html`, ділить на склади і перевіряє тексти (`node build.js`)
+- `AGENTS.md` — правила й нюанси для тих, хто змінює проєкт (зокрема AI-асистентів)
 - `.github/workflows/pages.yml` — збірка й публікація на GitHub Pages після кожного commit у `main`
