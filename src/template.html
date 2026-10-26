@@ -48,6 +48,10 @@ header{display:flex;justify-content:space-between;align-items:center;gap:12px;fl
 .cup{position:absolute;top:-9px;right:-7px;font-size:17px;line-height:1;filter:drop-shadow(0 1px 1px rgba(0,0,0,.25))}
 .tile:not(.gold) .cup{filter:grayscale(.85) brightness(1.15) drop-shadow(0 1px 1px rgba(0,0,0,.25))}
 .legend{font-size:14px;color:var(--muted)}
+.note{background:color-mix(in srgb,var(--star) 16%,var(--card));border:1px solid color-mix(in srgb,var(--star) 55%,var(--line));
+  border-radius:12px;padding:10px 14px;font-size:15px;line-height:1.45;display:flex;gap:10px;align-items:flex-start}
+.note p{margin:0;flex:1;min-width:0}
+.note button{border:0;background:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0 4px}
 .hdr-right{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .gh{display:inline-flex;align-items:center;gap:6px;font:600 14px system-ui,sans-serif;text-decoration:none;
   color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 12px}
@@ -91,6 +95,8 @@ button:focus-visible,.w:focus-visible{outline:3px solid var(--star);outline-offs
     <a class="gh" href="https://github.com/andrii-vityk/knyzhkova-pechera" target="_blank" rel="noopener" title="Код і тексти рівнів">
       <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>GitHub</a></div></header>
   <div class="bar" aria-hidden="true"><i id="barfill"></i></div>
+
+  <div class="note" id="note" role="status" hidden><p id="noteText"></p><button id="noteClose" aria-label="Сховати">×</button></div>
 
   <section id="map" aria-label="Рівні"></section>
 
@@ -274,13 +280,21 @@ function begin(){
   r.onerror=e=>{if(!live())return;
     if(e.error==="not-allowed"||e.error==="service-not-allowed"){stopMic();
       $("status").textContent="Немає доступу до мікрофона. Дозвольте мікрофон для цієї сторінки й натисніть «Читати» ще раз."}
-    else if(e.error==="network")$("status").textContent="Немає зв'язку з сервісом розпізнавання. Пробую знову…"};
+    else if(e.error==="network"){netFails++;
+      if(netFails>=3){stopMic();$("status").textContent="Сервіс розпізнавання недоступний. Перевірте інтернет. Якщо інтернет є, цей браузер, найімовірніше, не підтримує розпізнавання (так буває в Brave чи Opera): спробуйте Chrome, Edge або Safari. Читати можна й разом із дорослим через «✓ Прочитав слово»."}
+      else $("status").textContent="Немає зв'язку з сервісом розпізнавання. Пробую знову…"}
+    else if(e.error==="language-not-supported"){stopMic();
+      $("status").textContent="Цей браузер не розпізнає українську. Спробуйте Chrome, Edge або Safari."}};
+  r.onresult=((orig)=>e=>{netFails=0;orig(e)})(r.onresult);
   r.onend=()=>{if(live())restartSoon(250)};
   lastAct=Date.now();
   try{r.start()}catch(e){restartSoon(600)}
 }
+let netFails=0;
 function startMic(){
-  if(!SR){$("status").textContent="Цей браузер не розпізнає мовлення. Спробуйте Safari або Chrome, або дорослий натискає «✓ Прочитав слово».";return}
+  if(!SR){$("status").textContent=NO_SR_TEXT;return}
+  if(!window.isSecureContext){$("status").textContent=INSECURE_TEXT;return}
+  netFails=0;
   listening=true;$("status").textContent="";setMicUi(true);begin();
   clearInterval(watchT);watchT=setInterval(()=>{if(listening&&Date.now()-lastAct>6000){lastAct=Date.now();restartSoon(0)}},1000);
 }
@@ -303,6 +317,20 @@ function applyOpts(){
 $("optSyl").onchange=e=>{store.opt.syl=e.target.checked;save();applyOpts()};
 $("optCol").onchange=e=>{store.opt.col=e.target.checked;save();applyOpts()};
 $("optSize").oninput=e=>{store.opt.size=+e.target.value;save();applyOpts()};
+
+// Попередження про браузер: показуємо, доки читач його не закриє
+const NO_SR_TEXT="Цей браузер не вміє розпізнавати мовлення, тож слова не зеленітимуть самі. Відкрийте сторінку в Chrome, Edge або Safari. Або читайте разом із дорослим: він натискає «✓ Прочитав слово».";
+const INSECURE_TEXT="Мікрофон працює лише на сторінці з адресою https://. Відкрийте сайт за посиланням, а не як файл.";
+function browserNote(){
+  const ua=navigator.userAgent;
+  if(!SR)return NO_SR_TEXT;
+  if(!window.isSecureContext)return INSECURE_TEXT;
+  if(navigator.brave||/OPR\/|Opera/.test(ua))return "У Brave та Opera розпізнавання мовлення часто не працює. Якщо слова не зеленітимуть, відкрийте сторінку в Chrome, Edge або Safari.";
+  return "";
+}
+(function(){const t=browserNote();let seen="";try{seen=localStorage.getItem("chytaiko-note")||""}catch(e){}
+  if(t&&seen!==t){$("noteText").textContent=t;$("note").hidden=false}
+  $("noteClose").onclick=()=>{$("note").hidden=true;try{localStorage.setItem("chytaiko-note",t)}catch(e){}}})();
 
 showMap();
 </script>
