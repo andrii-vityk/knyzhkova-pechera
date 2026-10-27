@@ -120,6 +120,7 @@ button:focus-visible,.w:focus-visible{outline:3px solid var(--star);outline-offs
         <button class="big" id="mic">🎤 Читати</button>
         <button class="alt" id="confirm" title="Дорослий підтверджує слово">✓ Прочитав слово</button>
         <button class="alt" id="restart">↺ Спочатку</button>
+        <button class="alt" id="micReset" title="Якщо слова перестали зеленіти">🔄 Перезапустити мікрофон</button>
       </div>
       <div id="heard"></div>
       <div id="status"></div>
@@ -215,10 +216,10 @@ function renderMap(){
   m.append(lg);
   renderTotals();
 }
-function showMap(){stopMic();$("play").hidden=true;$("map").hidden=false;renderMap();window.scrollTo(0,0)}
+function showMap(){pauseMic();$("play").hidden=true;$("map").hidden=false;renderMap();window.scrollTo(0,0)}
 
 function load(i){
-  stopMic();lvl=i;cur=0;hints=0;store.last=LEVELS[i].id;save();
+  lvl=i;cur=0;hints=0;store.last=LEVELS[i].id;save();
   $("map").hidden=true;$("play").hidden=false;window.scrollTo(0,0);
   const L=LEVELS[i];
   $("ttl").textContent=L.t;$("lvlno").textContent=`Рівень ${i+1} з ${LEVELS.length} · ${CHAPTERS[L.ch].n}`;
@@ -237,11 +238,12 @@ function load(i){
     el.onkeydown=e=>{if(e.key==="Enter")el.onclick()};
     words.push({el,want:norm(parts.join("")),name:isName});box.append(el)});
   applyOpts();mark();renderTotals();
+  if(listening)restartSoon(0);else if(wantMic)startMic();
 }
 function mark(){words.forEach((w,i)=>{w.el.classList.toggle("ok",i<cur);w.el.classList.toggle("cur",i===cur)})}
 function advance(){cur++;mark();if(cur>=words.length)finish()}
 function finish(){
-  stopMic();const st=hints===0?3:hints<=2?2:1;
+  const st=hints===0?3:hints<=2?2:1;
   const id=LEVELS[lvl].id;store.stars[id]=Math.max(store.stars[id]||0,st);save();renderTotals();
   const w=$("win");w.hidden=false;
   w.innerHTML=`<div class="stars">🏆 ${"★".repeat(st)}</div><p>${st===3?"Золотий кубок! Без жодної підказки!":"Рівень пройдено! Молодець!"}</p>`+
@@ -262,10 +264,13 @@ function speak(t){if(!("speechSynthesis"in window))return;const u=new SpeechSynt
 // Chrome інколи «засинає» без жодної події. Тому: кожен перезапуск — новий
 // екземпляр розпізнавача, а сторож перезапускає його, якщо 6 с немає жодних подій.
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-let rec=null,listening=false,lastAct=0,restartT=null,watchT=null;
+// wantMic — читач увімкнув мікрофон і не вимикав його; тоді мікрофон
+// вмикається знову на кожному новому рівні.
+let rec=null,listening=false,wantMic=false,lastAct=0,restartT=null,watchT=null;
 function setMicUi(on){$("mic").textContent=on?"⏹ Стоп":"🎤 Читати";$("mic").classList.toggle("stop",on)}
-function stopMic(){listening=false;clearTimeout(restartT);clearInterval(watchT);
+function pauseMic(){listening=false;clearTimeout(restartT);clearInterval(watchT);
   const r=rec;rec=null;if(r)try{r.abort()}catch(e){};setMicUi(false)}
+function stopMic(){wantMic=false;pauseMic()}
 function restartSoon(ms){clearTimeout(restartT);restartT=setTimeout(()=>{if(!listening)return;
   const old=rec;rec=null;if(old)try{old.abort()}catch(e){}
   begin()},ms)}
@@ -311,13 +316,16 @@ function startMic(){
   if(!SR){$("status").textContent=NO_SR_TEXT;return}
   if(!window.isSecureContext){$("status").textContent=INSECURE_TEXT;return}
   netFails=0;
-  listening=true;$("status").textContent="";setMicUi(true);begin();
+  wantMic=true;listening=true;$("status").textContent="";setMicUi(true);begin();
   clearInterval(watchT);watchT=setInterval(()=>{if(listening&&Date.now()-lastAct>6000){lastAct=Date.now();restartSoon(0)}},1000);
 }
 $("mic").onclick=()=>listening?stopMic():startMic();
 // після ручного підтвердження — чистий перезапуск, щоб старий недочитаний фрагмент не заважав
 $("confirm").onclick=()=>{if(cur<words.length){advance();if(listening)restartSoon(0)}};
-$("restart").onclick=()=>{stopMic();load(lvl)};
+$("restart").onclick=()=>load(lvl);
+$("micReset").onclick=()=>{netFails=0;
+  if(listening){restartSoon(0);$("status").textContent="Мікрофон перезапущено. Можна читати далі."}
+  else startMic()};
 
 
 $("restart").onclick=()=>load(lvl);
